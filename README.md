@@ -1,2 +1,3 @@
 # mk-point-staker
-Stakes mycred points amongst users
+Stakes mycred points amongst users.
+Points count as money...
