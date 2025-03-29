@@ -42,31 +42,36 @@ function mkps_handle_stake_form_submission() {
         wp_send_json_error(['message' => __('Stake points must be greater than zero.', 'mk-point-staker')]);
     }
 
-    $team_name = mkps_get_team_name($user_id, true); // From sportspress-integration.php
+    $team_name = mkps_get_team_name($user_id, true);
     if (!$team_name) {
         wp_send_json_error(['message' => __('You must have a team assigned to create a stake.', 'mk-point-staker')]);
     }
 
-    if (mkps_has_sufficient_points($user_id, $stake_points)) {
-        mkps_deduct_points($user_id, $stake_points);
+    if (!mkps_has_sufficient_points($user_id, $stake_points)) {
+        wp_send_json_error(['message' => __('Insufficient points to create stake. Current balance: ' . mycred_get_users_balance($user_id), 'mk-point-staker')]);
+    }
 
-        $connection_code = wp_generate_password(8, false);
-        $stake_id = wp_insert_post([
-            'post_title'  => sprintf(__('Stake by %s for %d points', 'mk-point-staker'), $team_name, $stake_points),
-            'post_type'   => 'stake',
-            'post_status' => 'publish',
-            'post_author' => $user_id,
-        ]);
+    mkps_deduct_points($user_id, $stake_points);
 
-        if ($stake_id) {
-            update_post_meta($stake_id, '_mkps_stake_points', $stake_points);
-            update_post_meta($stake_id, '_mkps_connection_code', $connection_code);
-            wp_send_json_success(['message' => sprintf(__('Stake created successfully! Connection Code: <strong>%s</strong>', 'mk-point-staker'), $connection_code)]);
-        } else {
-            wp_send_json_error(['message' => __('Failed to create stake.', 'mk-point-staker')]);
-        }
+    $connection_code = wp_generate_password(8, false);
+    $stake_data = [
+        'post_title'  => sprintf(__('Stake by %s for %d points', 'mk-point-staker'), $team_name, $stake_points),
+        'post_type'   => 'stake',
+        'post_status' => 'publish',
+        'post_author' => $user_id,
+    ];
+    $stake_id = wp_insert_post($stake_data, true); // Return WP_Error on failure
+
+    if (is_wp_error($stake_id)) {
+        wp_send_json_error(['message' => __('Failed to create stake: ') . $stake_id->get_error_message()]);
+    }
+
+    if ($stake_id) {
+        update_post_meta($stake_id, '_mkps_stake_points', $stake_points);
+        update_post_meta($stake_id, '_mkps_connection_code', $connection_code);
+        wp_send_json_success(['message' => sprintf(__('Stake created successfully! Connection Code: <strong>%s</strong>', 'mk-point-staker'), $connection_code)]);
     } else {
-        wp_send_json_error(['message' => __('Insufficient points to create stake.', 'mk-point-staker')]);
+        wp_send_json_error(['message' => __('Failed to create stake (unknown error).', 'mk-point-staker')]);
     }
 }
 add_action('wp_ajax_mkps_submit_stake', 'mkps_handle_stake_form_submission');

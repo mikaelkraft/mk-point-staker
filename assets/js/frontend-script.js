@@ -1,35 +1,37 @@
 jQuery(document).ready(function($) {
   // Handle Stake Form Submission
-  $('#mkps-stake-form').on('submit', function(e) {
+  
+$('#mkps-stake-form').on('submit', function(e) {
     e.preventDefault();
-    
+
     var formData = $(this).serialize();
     var feedback = $('#mkps-stake-feedback');
-    
+
     feedback.html('Processing... Please Wait');
-    
+
     $.ajax({
-      url: mkps_ajax_object.ajax_url,
-      type: 'POST',
-      data: {
-        action: 'mkps_submit_stake',
-        nonce: mkps_ajax_object.nonce,
-        mkps_stake_points: $('#mkps_stake_points').val()
-      },
-      success: function(response) {
-        if (response.success) {
-          feedback.html(response.data.message).css('color', 'green');
-          $('#mkps-stake-form')[0].reset();
-        } else {
-          feedback.html(response.data.message).css('color', 'red');
+        url: mkps_ajax_object.ajax_url,
+        type: 'POST',
+        data: {
+            action: 'mkps_submit_stake',
+            nonce: mkps_ajax_object.nonce,
+            mkps_stake_points: $('#mkps_stake_points').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                feedback.html(response.data.message).css('color', 'green');
+                $('#mkps_stake-form')[0].reset();
+            } else {
+                feedback.html('Error: ' + response.data.message).css('color', 'red');
+                console.log('AJAX Error Response:', response); // Log the full response
+            }
+        },
+        error: function(xhr, status, error) {
+            feedback.html('AJAX Failed: ' + error).css('color', 'red');
+            console.log('AJAX Failure:', xhr.responseText); // Log server-side error
         }
-      },
-      error: function() {
-        feedback.html('An error occurred. Please try again.').css('color', 'red');
-      }
     });
-  });
-  
+});
   // Toggle Notifications Panel
   $('#mkps-notifications-toggle').on('click', function() {
     $('#mkps-notifications-panel').slideToggle();
