@@ -17,7 +17,7 @@
 }
 
 .mkps-stake-form button {
-    background-color: #0073aa;
+    background-color: #402176;
     color: #fff;
     padding: 10px 20px;
     border: none;
@@ -25,7 +25,7 @@
 }
 
 .mkps-stake-form button:hover {
-    background-color: #005d82;
+    background-color: #824F00;
 }
 
 #mkps-stake-feedback {
@@ -38,7 +38,7 @@
 }
 
 #mkps-notifications-toggle {
-    background-color: #f1f1f1;
+    background-color: #100418;
     padding: 10px;
     border: 1px solid #ddd;
     cursor: pointer;
@@ -55,22 +55,22 @@
 }
 
 .mkps-unread {
-    background-color: #f9f9f9;
+    background-color: #9DC1FF00;
     font-weight: bold;
 }
 
 .mkps-read {
-    background-color: #fff;
+    background-color: #4D4C4C;
 }
 
 .mkps-unread-count,
 .mkps-available-count {
-    color: #0073aa;
+    color: #A2C1FF;
     font-weight: bold;
 }
 
 .mkps-stake-count {
-    background: #0073aa;
+    background: #5300AA;
     color: white;
     padding: 2px 6px;
     border-radius: 10px;
@@ -87,7 +87,7 @@
 }
 
 .mkps-available-stakes-button {
-    background-color: #28a745;
+    background-color: #28A745;
     color: white;
     padding: 10px 20px;
     border: none;
@@ -111,10 +111,49 @@
     display: inline-block;
     width: 16px;
     height: 16px;
-    border: 3px solid #f3f3f3;
-    border-top: 3px solid #0073aa;
+    border: 3px solid #CD0000;
+    border-top: 3px solid #0B9F4E;
     border-radius: 50%;
     animation: spin 1s linear infinite;
+}
+
+.mkps-cancel-button {
+    background-color: #DC3545;
+    color: white;
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-left: 10px;
+}
+
+.mkps-cancel-button:hover {
+    background-color: #9F8F21;
+}
+
+.mkps-team-form {
+    margin: 20px 0;
+}
+.mkps-team-form label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+.mkps-team-form select {
+    width: 100%;
+    padding: 8px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+}
+.mkps-team-form button {
+    background-color: #297D0B;
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+}
+.mkps-team-form button:hover {
+    background-color: #1039AF;
 }
 
 @keyframes spin {
