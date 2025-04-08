@@ -1,5 +1,5 @@
 <?php
-// Prevent direct access to the file.
+// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
@@ -14,7 +14,7 @@ function mkps_notify_new_stake_creation($post_id) {
 
     $stake_author_id = get_post_field('post_author', $post_id);
     $stake_link = get_permalink($post_id);
-    $team_name = mkps_get_team_name($stake_author_id, true); // Use team name
+    $team_name = mkps_get_team_name($stake_author_id, true);
     $message = sprintf(
         __('A new stake has been created by %s. View it here: %s', 'mk-point-staker'),
         $team_name ?: get_the_author_meta('display_name', $stake_author_id),
@@ -25,6 +25,9 @@ function mkps_notify_new_stake_creation($post_id) {
     foreach ($users as $user) {
         mkps_send_notification($user->ID, __('New Stake Available', 'mk-point-staker'), $message, $post_id);
         mkps_send_email_notification($user->user_email, __('New Stake Available', 'mk-point-staker'), $message);
+        if (function_exists('um_message')) { // Ultimate Member Messages
+            um_message($user->ID, $message, ['type' => 'notification']);
+        }
     }
 }
 add_action('save_post_stake', 'mkps_notify_new_stake_creation');
@@ -47,6 +50,13 @@ function mkps_send_notification($user_id, $title, $message, $post_id = 0) {
     ];
 
     update_user_meta($user_id, '_mkps_notifications', $notifications);
+
+    // Ultimate Member sitewide notice fallback
+    if (!function_exists('um_message')) {
+        add_action('wp_footer', function() use ($message) {
+            echo "<div class='um-notification'>$message</div>";
+        });
+    }
 }
 
 /**

@@ -156,6 +156,38 @@
     background-color: #1039AF;
 }
 
+.um-notification {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+    background: #0073aa;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+    z-index: 1000;
+}
+
+.mkps-user-stats {
+    margin: 20px 0;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+}
+.mkps-user-stats h3 {
+    margin-top: 0;
+}
+.mkps-user-stats ul {
+    list-style: none;
+    padding: 0;
+}
+.mkps-user-stats li {
+    margin-bottom: 5px;
+}
+.mkps-user-stats strong {
+    display: inline-block;
+    width: 80px;
+}
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
