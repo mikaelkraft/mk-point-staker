@@ -17,7 +17,7 @@
 }
 
 .mkps-stake-form button {
-    background-color: #402176;
+    background-color: #0073aa;
     color: #fff;
     padding: 10px 20px;
     border: none;
@@ -25,7 +25,7 @@
 }
 
 .mkps-stake-form button:hover {
-    background-color: #824F00;
+    background-color: #005d82;
 }
 
 #mkps-stake-feedback {
@@ -38,7 +38,7 @@
 }
 
 #mkps-notifications-toggle {
-    background-color: #100418;
+    background-color: #f1f1f1;
     padding: 10px;
     border: 1px solid #ddd;
     cursor: pointer;
@@ -55,22 +55,22 @@
 }
 
 .mkps-unread {
-    background-color: #9DC1FF00;
+    background-color: #f9f9f9;
     font-weight: bold;
 }
 
 .mkps-read {
-    background-color: #4D4C4C;
+    background-color: #fff;
 }
 
 .mkps-unread-count,
 .mkps-available-count {
-    color: #A2C1FF;
+    color: #0073aa;
     font-weight: bold;
 }
 
 .mkps-stake-count {
-    background: #5300AA;
+    background: #0073aa;
     color: white;
     padding: 2px 6px;
     border-radius: 10px;
@@ -87,7 +87,7 @@
 }
 
 .mkps-available-stakes-button {
-    background-color: #28A745;
+    background-color: #28a745;
     color: white;
     padding: 10px 20px;
     border: none;
@@ -111,81 +111,10 @@
     display: inline-block;
     width: 16px;
     height: 16px;
-    border: 3px solid #CD0000;
-    border-top: 3px solid #0B9F4E;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #0073aa;
     border-radius: 50%;
     animation: spin 1s linear infinite;
-}
-
-.mkps-cancel-button {
-    background-color: #DC3545;
-    color: white;
-    padding: 5px 10px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    margin-left: 10px;
-}
-
-.mkps-cancel-button:hover {
-    background-color: #9F8F21;
-}
-
-.mkps-team-form {
-    margin: 20px 0;
-}
-.mkps-team-form label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-.mkps-team-form select {
-    width: 100%;
-    padding: 8px;
-    margin-bottom: 10px;
-    box-sizing: border-box;
-}
-.mkps-team-form button {
-    background-color: #297D0B;
-    color: #fff;
-    padding: 10px 20px;
-    border: none;
-    cursor: pointer;
-}
-.mkps-team-form button:hover {
-    background-color: #1039AF;
-}
-
-.um-notification {
-    position: fixed;
-    bottom: 10px;
-    right: 10px;
-    background: #0073aa;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 5px;
-    z-index: 1000;
-}
-
-.mkps-user-stats {
-    margin: 20px 0;
-    padding: 15px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-}
-.mkps-user-stats h3 {
-    margin-top: 0;
-}
-.mkps-user-stats ul {
-    list-style: none;
-    padding: 0;
-}
-.mkps-user-stats li {
-    margin-bottom: 5px;
-}
-.mkps-user-stats strong {
-    display: inline-block;
-    width: 80px;
 }
 
 @keyframes spin {

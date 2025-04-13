@@ -1,6 +1,6 @@
 <?php
 // Prevent direct access
-if (!defined('ABSPATH')) {
+if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
@@ -13,66 +13,38 @@ class MKPS_Assets {
     /**
      * Enqueue admin scripts and styles.
      */
-    public static function enqueue_admin_assets($hook) {
+    public static function enqueue_admin_assets( $hook ) {
         global $post_type;
-        if (($hook === 'post.php' || $hook === 'post-new.php') && $post_type === 'stake') {
-            wp_enqueue_style(
-                'mkps-admin-style',
-                plugins_url('assets/css/admin-style.css', dirname(__FILE__)),
-                [],
-                '1.0.0'
-            );
-            wp_enqueue_script(
-                'mkps-admin-script',
-                plugins_url('assets/js/admin-script.js', dirname(__FILE__)),
-                ['jquery'],
-                '1.0.0',
-                true
-            );
+        if ( $post_type === 'stake' ) {
+            wp_enqueue_style( 'mkps-admin-style', plugin_dir_url( __FILE__ ) . '../assets/css/admin-style.css', array(), '1.0.0' );
+            wp_enqueue_script( 'mkps-admin-script', plugin_dir_url( __FILE__ ) . '../assets/js/admin-script.js', array( 'jquery' ), '1.0.0', true );
 
-            $team_data = mkps_prefetch_teams();
-            wp_localize_script('mkps-admin-script', 'mkpsData', [
-                'ajaxUrl' => admin_url('admin-ajax.php'),
-                'nonce'   => wp_create_nonce('mkps_nonce'),
-                'teams'   => $team_data,
-            ]);
+            wp_localize_script( 'mkps-admin-script', 'mkpsData', array(
+                'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+                'nonce'   => wp_create_nonce( 'mkps_nonce' ),
+            ));
         }
     }
 
     /**
-     * Enqueue front-end scripts and styles (fallback if not in mk-point-staker.php).
+     * Enqueue front-end scripts and styles.
      */
     public static function enqueue_frontend_assets() {
-        // Note: This is primarily handled in mk-point-staker.php, but kept as a fallback
-        wp_enqueue_style(
-            'mkps-frontend-style',
-            plugins_url('assets/css/frontend-style.css', dirname(__FILE__)),
-            [],
-            '1.0.0'
-        );
-        wp_enqueue_script(
-            'mkps-frontend-script',
-            plugins_url('assets/js/frontend-script.js', dirname(__FILE__)),
-            ['jquery'],
-            '1.0.0',
-            true
-        );
+        wp_enqueue_style( 'mkps-frontend-style', plugin_dir_url( __FILE__ ) . '../assets/css/frontend-style.css', array(), '1.0.0' );
+        wp_enqueue_script( 'mkps-frontend-script', plugin_dir_url( __FILE__ ) . '../assets/js/frontend-script.js', array( 'jquery' ), '1.0.0', true );
 
-        $team_data = mkps_prefetch_teams();
-        wp_localize_script('mkps-frontend-script', 'mkpsFrontendData', [
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce'   => wp_create_nonce('mkps_nonce'), // Unified nonce
-            'teams'   => $team_data,
-        ]);
+        wp_localize_script( 'mkps-frontend-script', 'mkpsFrontendData', array(
+            'ajaxUrl' => admin_url( 'admin-ajax.php' ),
+            'nonce'   => wp_create_nonce( 'mkps_frontend_nonce' ),
+        ));
     }
 
     /**
      * Hooks into WordPress actions.
      */
     public static function init() {
-        add_action('admin_enqueue_scripts', [__CLASS__, 'enqueue_admin_assets']);
-        // Frontend enqueue is handled in mk-point-staker.php, but this can be uncommented if needed
-        // add_action('wp_enqueue_scripts', [__CLASS__, 'enqueue_frontend_assets']);
+        add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin_assets' ) );
+        add_action( 'wp_enqueue_scripts', array( __CLASS__, 'enqueue_frontend_assets' ) );
     }
 }
 
