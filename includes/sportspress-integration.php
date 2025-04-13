@@ -8,6 +8,12 @@ if (!defined('ABSPATH')) {
  * Create SportsPress Event for Paired Teams
  */
 function mkps_create_sportspress_event($stake_id, $creator_id, $accepting_user_id) {
+    // Verify SportsPress is loaded
+    if (!function_exists('sp_get_team_name')) {
+        error_log('MK Point Staker: SportsPress functions not available');
+        return false;
+    }
+
     $stake_points = get_post_meta($stake_id, '_mkps_stake_points', true);
     $connection_code = get_post_meta($stake_id, '_mkps_connection_code', true);
 
@@ -23,9 +29,14 @@ function mkps_create_sportspress_event($stake_id, $creator_id, $accepting_user_i
         $accepting_team_id = mkps_create_temp_team($accepting_user_id);
     }
 
-    // Get team names
-    $creator_team_name = sp_get_team_name($creator_team_id, $creator_id);
-    $accepting_team_name = sp_get_team_name($accepting_team_id, $accepting_user_id);
+    // Use SportsPress function for team names with fallback
+    $creator_team_name = function_exists('sp_get_team_name') 
+        ? sp_get_team_name($creator_team_id)
+        : get_userdata($creator_id)->display_name;
+    
+    $accepting_team_name = function_exists('sp_get_team_name')
+        ? sp_get_team_name($accepting_team_id)
+        : get_userdata($accepting_user_id)->display_name;
 
     $event_data = array(
         'post_title'   => sprintf(__('%s vs %s - Stake', 'mk-point-staker'), $creator_team_name, $accepting_team_name),
@@ -54,27 +65,6 @@ function mkps_create_sportspress_event($stake_id, $creator_id, $accepting_user_i
     }
     
     return $event_id;
-}
-
-/**
- * Helper function to get team name with fallbacks
- */
-function sp_get_team_name($team_id, $user_id) {
-    $name = '';
-    if ($team_id) {
-        $team_meta = get_post_meta($team_id);
-        $name = $team_meta['sp_team_short_name'][0] ?? '';
-        if (empty($name)) {
-            $name = $team_meta['sp_team'][0] ?? '';
-        }
-        if (empty($name)) {
-            $name = get_the_title($team_id);
-        }
-    }
-    if (empty($name)) {
-        $name = get_userdata($user_id)->display_name;
-    }
-    return $name;
 }
 
 /**

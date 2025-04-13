@@ -5,19 +5,17 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Render Stake Form Shortcode with cancellation option
+ * Check if user can create more stakes
  */
-function mkps_stake_form_shortcode() {
-    if (!is_user_logged_in()) {
-        return '<p>' . __('You must be logged in to create a stake.', 'mk-point-staker') . '</p>';
-    }
-
-    $user_id = get_current_user_id();
-    $active_stake = get_posts(array(
+function mkps_can_create_stake($user_id) {
+    $max_stakes = apply_filters('mkps_max_stakes_per_user', 3); // Allow filtering the max stakes
+    
+    $active_stakes = get_posts(array(
         'post_type' => 'stake',
         'author' => $user_id,
         'post_status' => 'publish',
         'meta_query' => array(
+            'relation' => 'AND',
             array(
                 'key' => '_mkps_stake_accepted',
                 'compare' => 'NOT EXISTS'
@@ -25,35 +23,107 @@ function mkps_stake_form_shortcode() {
             array(
                 'key' => '_mkps_stake_cancelled',
                 'compare' => 'NOT EXISTS'
+            ),
+            array(
+                'key' => '_mkps_stake_expired',
+                'compare' => 'NOT EXISTS'
             )
         ),
-        'posts_per_page' => 1
+        'posts_per_page' => -1,
+        'fields' => 'ids'
     ));
+    
+    return count($active_stakes) < $max_stakes;
+}
 
+/**
+ * Get user's active stakes
+ */
+function mkps_get_user_active_stakes($user_id) {
+    return get_posts(array(
+        'post_type' => 'stake',
+        'author' => $user_id,
+        'post_status' => 'publish',
+        'meta_query' => array(
+            'relation' => 'AND',
+            array(
+                'key' => '_mkps_stake_accepted',
+                'compare' => 'NOT EXISTS'
+            ),
+            array(
+                'key' => '_mkps_stake_cancelled',
+                'compare' => 'NOT EXISTS'
+            ),
+            array(
+                'key' => '_mkps_stake_expired',
+                'compare' => 'NOT EXISTS'
+            )
+        ),
+        'posts_per_page' => -1,
+        'orderby' => 'ID',
+        'order' => 'DESC'
+    ));
+}
+
+/**
+ * Render Stake Form Shortcode with multi-stake support
+ */
+function mkps_stake_form_shortcode() {
+    if (!is_user_logged_in()) {
+        return '<p>' . __('You must be logged in to create a stake.', 'mk-point-staker') . '</p>';
+    }
+
+    $user_id = get_current_user_id();
+    $active_stakes = mkps_get_user_active_stakes($user_id);
+    
     ob_start();
     ?>
     <div id="mkps-stake-feedback"></div>
-    <?php if (empty($active_stake)) : ?>
+    
+    <?php if (mkps_can_create_stake($user_id)) : ?>
         <form id="mkps-stake-form" class="mkps-stake-form">
             <label for="mkps_stake_points"><?php _e('Stake Points', 'mk-point-staker'); ?></label>
             <input type="number" name="mkps_stake_points" id="mkps_stake_points" min="1" required>
             
             <div class="mkps-form-actions">
-                <button type="submit" name="mkps_submit_stake"><?php _e('Create Stake', 'mk-point-staker'); ?></button>
+                <button type="submit" name="mkps_submit_stake" class="button button-primary">
+                    <?php _e('Create Stake', 'mk-point-staker'); ?>
+                </button>
             </div>
         </form>
-    <?php else : 
-        $stake_id = $active_stake[0]->ID;
-        $stake_points = get_post_meta($stake_id, '_mkps_stake_points', true);
-        ?>
-        <div class="mkps-active-stake">
-            <p><?php printf(__('You already have an active stake for %d points.', 'mk-point-staker'), $stake_points); ?></p>
-            <button id="mkps-cancel-stake" class="button" data-stake-id="<?php echo $stake_id; ?>">
-                <?php _e('Cancel Stake', 'mk-point-staker'); ?>
-                <span class="mkps-spinner" style="display:none;"></span>
-            </button>
+    <?php else : ?>
+        <div class="mkps-stake-limit-reached">
+            <p><?php _e('You have reached your maximum number of active stakes (3). Please cancel one or wait for acceptance before creating new stakes.', 'mk-point-staker'); ?></p>
         </div>
     <?php endif; ?>
+    
+    <?php if (!empty($active_stakes)) : ?>
+        <div class="mkps-active-stakes">
+            <h4><?php _e('Your Active Stakes:', 'mk-point-staker'); ?></h4>
+            <ul class="mkps-active-stakes-list">
+                <?php foreach ($active_stakes as $stake) : 
+                    $stake_points = get_post_meta($stake->ID, '_mkps_stake_points', true);
+                    $expiration = get_post_meta($stake->ID, '_mkps_expiration', true);
+                    $expires_in = $expiration ? human_time_diff(time(), $expiration) : '';
+                    ?>
+                    <li class="mkps-stake-item" data-stake-id="<?php echo $stake->ID; ?>">
+                        <div class="mkps-stake-info">
+                            <span class="mkps-stake-id">#<?php echo $stake->ID; ?></span>
+                            <span class="mkps-stake-points"><?php echo $stake_points; ?> <?php _e('points', 'mk-point-staker'); ?></span>
+                            <?php if ($expires_in) : ?>
+                                <span class="mkps-stake-expiry"><?php printf(__('Expires in %s', 'mk-point-staker'), $expires_in); ?></span>
+                            <?php endif; ?>
+                        </div>
+                        <button class="mkps-cancel-stake button" data-stake-id="<?php echo $stake->ID; ?>">
+                            <?php _e('Cancel', 'mk-point-staker'); ?>
+                            <span class="mkps-spinner" style="display:none;"></span>
+                        </button>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+        </div>
+    <?php endif; ?>
+    
     <?php
     return ob_get_clean();
 }
@@ -69,29 +139,12 @@ function mkps_handle_stake_form_submission() {
         wp_send_json_error(array('message' => __('You must be logged in to create a stake.', 'mk-point-staker')));
     }
 
-    $stake_points = intval($_POST['mkps_stake_points']);
     $user_id = get_current_user_id();
+    $stake_points = intval($_POST['mkps_stake_points']);
 
-    // Check for existing active stake
-    $active_stake = get_posts(array(
-        'post_type' => 'stake',
-        'author' => $user_id,
-        'post_status' => 'publish',
-        'meta_query' => array(
-            array(
-                'key' => '_mkps_stake_accepted',
-                'compare' => 'NOT EXISTS'
-            ),
-            array(
-                'key' => '_mkps_stake_cancelled',
-                'compare' => 'NOT EXISTS'
-            )
-        ),
-        'posts_per_page' => 1
-    ));
-
-    if (!empty($active_stake)) {
-        wp_send_json_error(array('message' => __('You already have an active stake. Please cancel it before creating a new one.', 'mk-point-staker')));
+    // Check stake limit
+    if (!mkps_can_create_stake($user_id)) {
+        wp_send_json_error(array('message' => __('You have reached your maximum number of active stakes (3).', 'mk-point-staker')));
     }
 
     if ($stake_points <= 0) {

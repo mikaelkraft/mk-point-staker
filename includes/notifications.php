@@ -273,7 +273,6 @@ function mkps_mark_sitewide_notification_read() {
 }
 add_action('wp_ajax_mkps_mark_notification_read', 'mkps_mark_sitewide_notification_read');
 
-
 /**
  * AJAX handler for getting notification counts
  */
