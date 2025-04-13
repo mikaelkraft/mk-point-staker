@@ -1,12 +1,13 @@
 jQuery(document).ready(function($) {
-  // Handle Stake Form Submission
+  // Enhanced Stake Form Handling
   $('#mkps-stake-form').on('submit', function(e) {
     e.preventDefault();
+    var $form = $(this);
+    var $feedback = $('#mkps-stake-feedback');
+    var $submitBtn = $form.find('button[type="submit"]');
     
-    var formData = $(this).serialize();
-    var feedback = $('#mkps-stake-feedback');
-    
-    feedback.html('Processing... Please Wait');
+    $feedback.html('<div class="mkps-spinner"></div> Processing...').css('color', '');
+    $submitBtn.prop('disabled', true);
     
     $.ajax({
       url: mkps_ajax_object.ajax_url,
@@ -18,107 +19,122 @@ jQuery(document).ready(function($) {
       },
       success: function(response) {
         if (response.success) {
-          feedback.html(response.data.message).css('color', 'green');
-          $('#mkps-stake-form')[0].reset();
+          $feedback.html('<div class="mkps-success">' + response.data.message + '</div>');
+          if (response.data.refresh) {
+            setTimeout(function() {
+              location.reload();
+            }, 2000);
+          }
         } else {
-          feedback.html(response.data.message).css('color', 'red');
+          $feedback.html('<div class="mkps-error">' + response.data.message + '</div>');
         }
       },
       error: function() {
-        feedback.html('An error occurred. Please try again.').css('color', 'red');
+        $feedback.html('<div class="mkps-error">An error occurred. Please try again.</div>');
+      },
+      complete: function() {
+        $submitBtn.prop('disabled', false);
       }
     });
   });
   
-  // Toggle Notifications Panel
-  $('#mkps-notifications-toggle').on('click', function() {
-    $('#mkps-notifications-panel').slideToggle();
-  });
-  
-  // Handle Stake Acceptance via AJAX
-  $('.mkps-accept-button').on('click', function() {
-    var button = $(this);
-    var stakeId = button.data('stake-id');
-    var spinner = button.find('.mkps-spinner');
+  // Enhanced Stake Cancellation
+  $('#mkps-cancel-stake').on('click', function() {
+    if (!confirm('Are you sure you want to cancel this stake? Your points will be refunded.')) {
+      return;
+    }
     
-    spinner.show();
-    button.prop('disabled', true);
+    var $button = $(this);
+    var stakeId = $button.data('stake-id');
+    var $spinner = $button.find('.mkps-spinner');
+    
+    $spinner.show();
+    $button.prop('disabled', true);
     
     $.ajax({
       url: mkps_ajax_object.ajax_url,
       type: 'POST',
       data: {
-        action: 'mkps_accept_stake',
+        action: 'mkps_cancel_stake',
         nonce: mkps_ajax_object.nonce,
         stake_id: stakeId
       },
       success: function(response) {
         if (response.success) {
-          button.replaceWith('<span class="mkps-accepted-text">' + response.data.message + '</span>');
+          $('#mkps-stake-feedback').html('<div class="mkps-success">' + response.data.message + '</div>');
+          if (response.data.refresh) {
+            setTimeout(function() {
+              location.reload();
+            }, 1500);
+          }
         } else {
           alert(response.data.message);
-          spinner.hide();
-          button.prop('disabled', false);
         }
       },
       error: function() {
         alert('An error occurred. Please try again.');
-        spinner.hide();
-        button.prop('disabled', false);
+      },
+      complete: function() {
+        $spinner.hide();
+        $button.prop('disabled', false);
       }
     });
   });
   
-  // Handle Available Stakes Button Click
-  $('.mkps-available-stakes-button').on('click', function(e) {
-    e.preventDefault();
-    var button = $(this);
-    var panel = $('#mkps-stakes-panel');
-    var nonce = button.data('nonce');
-    
-    if (panel.is(':visible')) {
-      panel.slideUp();
-    } else {
-      panel.slideDown();
-      if (!panel.html().trim()) {
-        $.ajax({
-          url: mkps_ajax_object.ajax_url,
-          type: 'POST',
-          data: {
-            action: 'mkps_load_notifications',
-            nonce: nonce
-          },
-          success: function(response) {
-            if (response.success) {
-              panel.html(response.data.html);
-            } else {
-              panel.html('<p>' + response.data.message + '</p>');
+  // Enhanced Notification Handling
+  $(document).on('click', '.mkps-sitewide-notifications li', function() {
+    var $item = $(this);
+    if ($item.hasClass('unread')) {
+      var index = $item.data('index');
+      
+      $.ajax({
+        url: mkps_ajax_object.ajax_url,
+        type: 'POST',
+        data: {
+          action: 'mkps_mark_notification_read',
+          nonce: mkps_ajax_object.nonce,
+          index: index
+        },
+        success: function() {
+          $item.removeClass('unread').addClass('read');
+          var $count = $('.mkps-unread-count');
+          if ($count.length) {
+            var current = parseInt($count.text()) || 0;
+            if (current > 0) {
+              $count.text(current - 1);
             }
-          },
-          error: function() {
-            panel.html('<p>An error occurred. Please try again.</p>');
           }
-        });
-      }
+        }
+      });
     }
   });
   
-  // Update Tab Title with Count Dynamically
-  function updateTabTitle() {
-    var count = $('.mkps-notification-bubble').text() || 0;
-    // Adjust this selector based on your profile manager's tab structure (e.g., UM or WP Profile)
-    var tabTitle = $('.um-form .um-profile-nav .um-profile-nav-item:contains("Available Stakes")'); // Replace with correct selector
-    if (tabTitle.length) {
-      if (count > 0 && !tabTitle.find('.mkps-notification-bubble').length) {
-        tabTitle.append(' <span class="mkps-notification-bubble">' + count + '</span>');
-      } else if (count == 0) {
-        tabTitle.find('.mkps-notification-bubble').remove();
+  // Dynamic Notification Count Update
+  function updateNotificationCounts() {
+    $.ajax({
+      url: mkps_ajax_object.ajax_url,
+      type: 'POST',
+      data: {
+        action: 'mkps_get_notification_counts',
+        nonce: mkps_ajax_object.nonce
+      },
+      success: function(response) {
+        if (response.success) {
+          $('.mkps-unread-count').text(response.data.unread);
+          $('.mkps-available-count').text(response.data.available);
+          
+          // Update browser tab title if there are unread notifications
+          if (response.data.unread > 0) {
+            document.title = '(' + response.data.unread + ') ' + document.title.replace(/^\(\d+\)\s/, '');
+          } else {
+            document.title = document.title.replace(/^\(\d+\)\s/, '');
+          }
+        }
       }
-    }
+    });
   }
   
-  // Run on page load and when AJAX or DOM changes
-  $(document).ready(updateTabTitle);
-  $(document).ajaxComplete(updateTabTitle);
-  $(document).on('DOMNodeInserted', updateTabTitle);
+  // Update counts every 30 seconds
+  setInterval(updateNotificationCounts, 30000);
+  updateNotificationCounts();
 });

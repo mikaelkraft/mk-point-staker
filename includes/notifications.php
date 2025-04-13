@@ -272,3 +272,37 @@ function mkps_mark_sitewide_notification_read() {
     wp_send_json_error(array('message' => 'Notification not found'));
 }
 add_action('wp_ajax_mkps_mark_notification_read', 'mkps_mark_sitewide_notification_read');
+
+
+/**
+ * AJAX handler for getting notification counts
+ */
+function mkps_get_notification_counts() {
+    check_ajax_referer('mkps_nonce', 'nonce');
+    
+    if (!is_user_logged_in()) {
+        wp_send_json_error(array('message' => 'Not logged in'));
+    }
+    
+    $user_id = get_current_user_id();
+    $notifications = get_user_meta($user_id, '_mkps_notifications', true);
+    
+    $unread = 0;
+    $available = 0;
+    
+    if (is_array($notifications)) {
+        $unread = count(array_filter($notifications, function($n) {
+            return !$n['read'];
+        }));
+        
+        $available = count(array_filter($notifications, function($n) {
+            return !empty($n['post_id']) && get_post_type($n['post_id']) === 'stake' && !get_post_meta($n['post_id'], '_mkps_stake_accepted', true);
+        }));
+    }
+    
+    wp_send_json_success(array(
+        'unread' => $unread,
+        'available' => $available
+    ));
+}
+add_action('wp_ajax_mkps_get_notification_counts', 'mkps_get_notification_counts');

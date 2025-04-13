@@ -121,3 +121,109 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Enhanced Notification Styles */
+.mkps-sitewide-notifications {
+    max-width: 600px;
+    margin: 20px auto;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.mkps-sitewide-notifications h3 {
+    background: #0073aa;
+    color: white;
+    padding: 10px 15px;
+    margin: 0;
+}
+
+.mkps-sitewide-notifications ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.mkps-sitewide-notifications li {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    align-items: flex-start;
+}
+
+.mkps-sitewide-notifications li.unread {
+    background-color: #f8fcff;
+}
+
+.mkps-sitewide-notifications li.read {
+    background-color: white;
+}
+
+.notification-icon {
+    font-size: 24px;
+    margin-right: 15px;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-content small {
+    color: #777;
+    font-size: 12px;
+    display: block;
+    margin-top: 5px;
+}
+
+/* Enhanced Stats Grid */
+.mkps-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.mkps-stat-box {
+    padding: 15px;
+    text-align: center;
+    border-radius: 5px;
+}
+
+.mkps-stat-box.wins {
+    background-color: #e6f7e6;
+    border: 1px solid #28a745;
+}
+
+.mkps-stat-box.losses {
+    background-color: #fde8e8;
+    border: 1px solid #dc3545;
+}
+
+.mkps-stat-box.draws {
+    background-color: #e8f4fd;
+    border: 1px solid #17a2b8;
+}
+
+.stat-value {
+    display: block;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #555;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+    .mkps-stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .mkps-sitewide-notifications {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+}
