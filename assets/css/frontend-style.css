@@ -1,5 +1,5 @@
 :root {
-    --primary-color: #198208;
+    --primary-color: #9A2AA8;
     --primary-hover: #126b03;
     --secondary-color: #7817A6;
     --secondary-hover: #5d1283;
@@ -66,7 +66,7 @@
 
 /* Notifications */
 #mkps-notifications-toggle {
-    background-color: transparent;
+    background-color: #C22ED5;
     padding: 12px 20px;
     border: 2px solid var(--secondary-color);
     border-radius: 4px;
@@ -141,7 +141,7 @@
 
 .stat-label {
     font-size: 14px;
-    color: var(--dark-text);
+    color: var(--light-bg);
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
@@ -172,7 +172,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 15px;
-    background: white;
+    background: #CD78ED;
     border: 1px solid var(--border-color);
     margin-bottom: 12px;
     border-radius: 6px;
@@ -303,7 +303,7 @@
 }
 
 .mkps-sitewide-notifications li.read {
-    background-color: white;
+    background-color: #DB88FA;
 }
 
 .notification-icon {
@@ -317,7 +317,7 @@
 }
 
 .notification-content small {
-    color: #6c757d;
+    color: #E1EFFB;
     font-size: 0.85em;
     display: block;
     margin-top: 5px;
