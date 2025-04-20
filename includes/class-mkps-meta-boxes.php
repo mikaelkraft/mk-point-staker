@@ -5,77 +5,74 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Class MKPS_Meta_Boxes
- * Handles adding and saving custom meta boxes for the Stake post type.
+ * Meta Boxes Handler
  */
 class MKPS_Meta_Boxes {
 
     /**
-     * Registers the meta boxes.
+     * Constructor
      */
-    public static function add_meta_boxes() {
+    public function __construct() {
+        add_action( 'add_meta_boxes', array( $this, 'add_meta_boxes' ) );
+        add_action( 'save_post', array( $this, 'save_meta_boxes' ) );
+    }
+
+    /**
+     * Add meta boxes
+     */
+    public function add_meta_boxes() {
         add_meta_box(
-            'mkps_stake_meta_box',
+            'mkps_stake_details',
             __( 'Stake Details', 'mk-point-staker' ),
-            array( __CLASS__, 'render_stake_meta_box' ),
-            'stake',
+            array( $this, 'render_stake_details' ),
+            'mkps_stake',
             'normal',
             'high'
         );
     }
 
     /**
-     * Renders the Stake Details meta box content.
-     *
-     * @param WP_Post $post The post object.
+     * Render stake details meta box
      */
-    public static function render_stake_meta_box( $post ) {
-        // Retrieve existing data
-        $stake_points = get_post_meta( $post->ID, '_mkps_stake_points', true );
-
-        // Nonce for security
-        wp_nonce_field( 'mkps_save_stake_meta_box_data', 'mkps_stake_meta_box_nonce' );
-
-        // Display form fields
+    public function render_stake_details( $post ) {
+        wp_nonce_field( 'mkps_save_stake_details', 'mkps_stake_nonce' );
+        $points = get_post_meta( $post->ID, '_mkps_stake_points', true );
+        $commission = get_post_meta( $post->ID, '_mkps_commission_rate', true );
+        $commission = $commission ?: get_option( 'mkps_options', array( 'commission_rate' => 0.05 ) )['commission_rate'];
         ?>
         <p>
-            <label for="mkps_stake_points"><?php _e( 'Stake Points:', 'mk-point-staker' ); ?></label><br>
-            <input type="number" id="mkps_stake_points" name="mkps_stake_points" value="<?php echo esc_attr( $stake_points ); ?>" min="1" required>
+            <label for="mkps_stake_points"><?php _e( 'Stake Points', 'mk-point-staker' ); ?></label>
+            <input type="number" id="mkps_stake_points" name="mkps_stake_points" value="<?php echo esc_attr( $points ); ?>" min="1">
+        </p>
+        <p>
+            <label for="mkps_commission_rate"><?php _e( 'Commission Rate', 'mk-point-staker' ); ?></label>
+            <input type="number" step="0.01" min="0" max="1" id="mkps_commission_rate" name="mkps_commission_rate" value="<?php echo esc_attr( $commission ); ?>">
+            <span><?php _e( 'e.g., 0.05 for 5%', 'mk-point-staker' ); ?></span>
         </p>
         <?php
     }
 
     /**
-     * Saves the meta box data when the stake post is saved.
-     *
-     * @param int $post_id The ID of the post being saved.
+     * Save meta box data
      */
-    public static function save_meta_box_data( $post_id ) {
-        // Check nonce for security
-        if ( ! isset( $_POST['mkps_stake_meta_box_nonce'] ) || 
-             ! wp_verify_nonce( $_POST['mkps_stake_meta_box_nonce'], 'mkps_save_stake_meta_box_data' ) ) {
+    public function save_meta_boxes( $post_id ) {
+        if ( ! isset( $_POST['mkps_stake_nonce'] ) || ! wp_verify_nonce( $_POST['mkps_stake_nonce'], 'mkps_save_stake_details' ) ) {
             return;
         }
 
-        // Ensure user has permission to edit the post
-        if ( ! current_user_can( 'edit_post', $post_id ) ) {
+        if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE ) {
             return;
         }
 
-        // Save Stake Points
         if ( isset( $_POST['mkps_stake_points'] ) ) {
-            $stake_points = intval( $_POST['mkps_stake_points'] );
-            update_post_meta( $post_id, '_mkps_stake_points', $stake_points );
+            update_post_meta( $post_id, '_mkps_stake_points', absint( $_POST['mkps_stake_points'] ) );
         }
-    }
 
-    /**
-     * Hooks into WordPress actions.
-     */
-    public static function init() {
-        add_action( 'add_meta_boxes', array( __CLASS__, 'add_meta_boxes' ) );
-        add_action( 'save_post', array( __CLASS__, 'save_meta_box_data' ) );
+        if ( isset( $_POST['mkps_commission_rate'] ) ) {
+            update_post_meta( $post_id, '_mkps_commission_rate', floatval( $_POST['mkps_commission_rate'] ) );
+        }
     }
 }
 
-MKPS_Meta_Boxes::init();
+// Initialize
+new MKPS_Meta_Boxes();

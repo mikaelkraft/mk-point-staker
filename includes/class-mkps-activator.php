@@ -5,35 +5,26 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * MKPS_Activator class
- * Handles plugin activation tasks
+ * Plugin Activation Handler
  */
 class MKPS_Activator {
 
     /**
-     * Activation hook
+     * Activate the plugin
      */
     public static function activate() {
-        // Check for myCRED dependency
-        if ( ! class_exists( 'myCRED_Core' ) ) {
-            deactivate_plugins( plugin_basename( __FILE__ ) );
-            wp_die( __( 'MK Point Staker requires myCRED to be installed and active.', 'mk-point-staker' ) );
+        // Set default options
+        $options = get_option( 'mkps_options', array() );
+        if ( empty( $options ) ) {
+            $options = array(
+                'commission_rate' => 0.05, // Default 5% commission
+            );
+            update_option( 'mkps_options', $options );
         }
 
-        // Register Stake post type
-        $post_type = new MKPS_Post_Type();
-        $post_type->register();
-
-        // Flush rewrite rules
-        flush_rewrite_rules();
-
-        // Set default options
-        $default_options = array(
-            'default_stake_points' => 10,
-            'enable_notifications' => true,
-        );
-        if ( ! get_option( 'mkps_options' ) ) {
-            update_option( 'mkps_options', $default_options );
+        // Set admin user ID for commission
+        if ( ! get_option( 'admin_user_id' ) ) {
+            update_option( 'admin_user_id', 1 );
         }
     }
 }
