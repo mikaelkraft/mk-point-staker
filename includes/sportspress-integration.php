@@ -1,97 +1,188 @@
 <?php
-// Prevent direct access
+// Prevent direct access to the file.
 if ( ! defined( 'ABSPATH' ) ) {
     exit;
 }
 
 /**
- * Create SportsPress Event for Accepted Stake
+ * Create SportsPress Event for Paired Teams
  */
-function mkps_create_sportspress_event( $stake_id, $author_team_id, $opponent_team_id ) {
-    $author_team_name = $author_team_id ? get_the_title( $author_team_id ) : 'Team 1';
-    $opponent_team_name = $opponent_team_id ? get_the_title( $opponent_team_id ) : 'Team 2';
+function mkps_create_sportspress_event( $stake_id, $creator_id, $accepting_user_id ) {
+    $stake_points = get_post_meta( $stake_id, '_mkps_stake_points', true );
+    $connection_code = get_post_meta( $stake_id, '_mkps_connection_code', true );
 
-    $event_args = array(
-        'post_type'   => 'sp_event',
-        'post_title'  => sprintf( '%s vs %s - Stake', $author_team_name, $opponent_team_name ),
-        'post_status' => 'publish',
-        'post_author' => get_post_field( 'post_author', $stake_id ),
-    );
-
-    $event_id = wp_insert_post( $event_args );
-
-    if ( $event_id ) {
-        update_post_meta( $event_id, 'sp_team', array( $author_team_id, $opponent_team_id ) );
-        update_post_meta( $event_id, '_sp_teams', array( $author_team_id, $opponent_team_id ) );
-        update_post_meta( $event_id, '_mkps_stake_id', $stake_id );
-
-        // Initialize box score
-        update_post_meta( $event_id, 'sp_results', array(
-            $author_team_id   => array( 'score' => '' ),
-            $opponent_team_id => array( 'score' => '' ),
-        ) );
+    // Fetch team details for creator
+    $creator_team_id = get_user_meta( $creator_id, '_sp_team_id', true );
+    $creator_team_name = '';
+    if ( $creator_team_id ) {
+        $team_meta = get_post_meta( $creator_team_id );
+        $creator_team_name = $team_meta['sp_team_short_name'][0] ?? '';
+        if ( empty( $creator_team_name ) ) {
+            $creator_team_name = $team_meta['sp_team'][0] ?? '';
+        }
+        if ( empty( $creator_team_name ) ) {
+            $creator_team_name = get_the_title( $creator_team_id );
+        }
+    }
+    if ( empty( $creator_team_name ) ) {
+        $creator_team_name = get_userdata( $creator_id )->display_name;
     }
 
-    return $event_id;
+    // Fetch team details for acceptor
+    $accepting_team_id = get_user_meta( $accepting_user_id, '_sp_team_id', true );
+    $accepting_team_name = '';
+    if ( $accepting_team_id ) {
+        $team_meta = get_post_meta( $accepting_team_id );
+        $accepting_team_name = $team_meta['sp_team_short_name'][0] ?? '';
+        if ( empty( $accepting_team_name ) ) {
+            $accepting_team_name = $team_meta['sp_team'][0] ?? '';
+        }
+        if ( empty( $accepting_team_name ) ) {
+            $accepting_team_name = get_the_title( $accepting_team_id );
+        }
+    }
+    if ( empty( $accepting_team_name ) ) {
+        $accepting_team_name = get_userdata( $accepting_user_id )->display_name;
+    }
+
+    $event_data = array(
+        'post_title'   => sprintf( __( '%s vs %s - Stake', 'mk-point-staker' ), $creator_team_name, $accepting_team_name ),
+        'post_content' => sprintf( __( 'A stake match for %d points. Connection Code: %s', 'mk-point-staker' ), $stake_points, $connection_code ),
+        'post_type'    => 'sp_event',
+        'post_status'  => 'publish',
+        'post_author'  => $creator_id,
+    );
+
+    $event_id = wp_insert_post( $event_data );
+    if ( $event_id ) {
+        // Preselect teams for box score
+        if ( $creator_team_id && $accepting_team_id ) {
+            update_post_meta( $event_id, 'sp_team', array( $creator_team_id, $accepting_team_id ) );
+            update_post_meta( $event_id, 'sp_format', 'friendly' );
+            update_post_meta( $event_id, 'sp_minutes', 90 );
+            update_post_meta( $event_id, 'sp_mode', 'team' );
+            // Initialize results structure for box score
+            update_post_meta( $event_id, 'sp_results', array(
+                $creator_team_id => array( 'points' => 0 ),
+                $accepting_team_id => array( 'points' => 0 ),
+            ));
+            // Assign players to teams
+            update_post_meta( $event_id, 'sp_players', array(
+                $creator_team_id => array( $creator_id ),
+                $accepting_team_id => array( $accepting_user_id ),
+            ));
+        }
+
+        update_post_meta( $stake_id, '_mkps_event_id', $event_id );
+        update_post_meta( $event_id, '_mkps_stake_id', $stake_id );
+
+        mkps_notify_event_creation( $event_id, $creator_id, $accepting_user_id );
+    }
 }
 add_action( 'mkps_stake_accepted', 'mkps_create_sportspress_event', 10, 3 );
 
 /**
- * Update Points Based on SportsPress Event Results
+ * Notify Users of Event Creation
  */
-function mkps_update_points_on_result( $post_id ) {
-    if ( get_post_type( $post_id ) !== 'sp_event' ) {
-        return;
+function mkps_notify_event_creation( $event_id, $creator_id, $accepting_user_id ) {
+    $event_link = get_permalink( $event_id );
+    $stake_id = get_post_meta( $event_id, '_mkps_stake_id', true );
+    $stake_link = get_permalink( $stake_id );
+    $message = sprintf( __( 'A new stake match has been scheduled. View the event details here: %s | Stake details: %s', 'mk-point-staker' ), $event_link, $stake_link );
+    wp_mail( get_userdata( $creator_id )->user_email, __( 'New Stake Match Event', 'mk-point-staker' ), $message );
+    wp_mail( get_userdata( $accepting_user_id )->user_email, __( 'New Stake Match Event', 'mk-point-staker' ), $message );
+}
+
+/**
+ * Record Match Results
+ */
+function mkps_record_match_results( $event_id, $winner_id, $is_draw = false ) {
+    $stake_id = get_post_meta( $event_id, '_mkps_stake_id', true );
+    $stake_points = get_post_meta( $stake_id, '_mkps_stake_points', true );
+    $creator_id = get_post_field( 'post_author', $stake_id );
+    $accepting_user_id = get_post_meta( $stake_id, '_mkps_stake_accepted_by', true );
+    $admin_id = 1; // Default admin user ID
+    $admin_fee_percent = 5; // Adjustable admin fee (5%)
+
+    if ( $is_draw ) {
+        mycred_add( 'stake_draw_refund', $creator_id, $stake_points, __( 'Points refunded for a draw in stake match', 'mk-point-staker' ) );
+        mycred_add( 'stake_draw_refund', $accepting_user_id, $stake_points, __( 'Points refunded for a draw in stake match', 'mk-point-staker' ) );
+        update_post_meta( $stake_id, '_mkps_stake_completed', true );
+        // Update draw stats
+        $creator_draws = get_user_meta( $creator_id, '_mkps_draws', true ) ?: 0;
+        $accepting_draws = get_user_meta( $accepting_user_id, '_mkps_draws', true ) ?: 0;
+        update_user_meta( $creator_id, '_mkps_draws', $creator_draws + 1 );
+        update_user_meta( $accepting_user_id, '_mkps_draws', $accepting_draws + 1 );
+        mkps_notify_match_result( $stake_id, null, true );
+    } else {
+        $loser_id = $winner_id === $creator_id ? $accepting_user_id : $creator_id;
+        $total_points = $stake_points * 2;
+        $admin_fee = round( $total_points * ($admin_fee_percent / 100) );
+        $winner_points = $total_points - $admin_fee;
+
+        if ( $winner_id && mycred_add( 'stake_victory', $winner_id, $winner_points, __( 'Points awarded for winning a stake match', 'mk-point-staker' ) ) ) {
+            // Award admin fee
+            mycred_add( 'stake_admin_fee', $admin_id, $admin_fee, __( 'Admin fee from stake match', 'mk-point-staker' ) );
+            update_post_meta( $stake_id, '_mkps_stake_winner', $winner_id );
+            update_post_meta( $stake_id, '_mkps_stake_completed', true );
+            $winner_wins = get_user_meta( $winner_id, '_mkps_wins', true ) ?: 0;
+            $loser_losses = get_user_meta( $loser_id, '_mkps_losses', true ) ?: 0;
+            update_user_meta( $winner_id, '_mkps_wins', $winner_wins + 1 );
+            update_user_meta( $loser_id, '_mkps_losses', $loser_losses + 1 );
+            mkps_notify_match_result( $stake_id, $winner_id );
+        }
+    }
+}
+
+/**
+ * Notify Users of Match Result
+ */
+function mkps_notify_match_result( $stake_id, $winner_id, $is_draw = false ) {
+    $creator_id = get_post_field( 'post_author', $stake_id );
+    $accepting_user_id = get_post_meta( $stake_id, '_mkps_stake_accepted_by', true );
+
+    if ( $is_draw ) {
+        $message = __( 'The match has concluded in a draw. Your points have been refunded.', 'mk-point-staker' );
+    } else {
+        $winner_name = get_userdata( $winner_id )->display_name;
+        $message = sprintf( __( 'The match has concluded, and %s is the winner!', 'mk-point-staker' ), $winner_name );
     }
 
-    $stake_id = get_post_meta( $post_id, '_mkps_stake_id', true );
+    wp_mail( get_userdata( $creator_id )->user_email, __( 'Match Result', 'mk-point-staker' ), $message );
+    wp_mail( get_userdata( $accepting_user_id )->user_email, __( 'Match Result', 'mk-point-staker' ), $message );
+}
+
+/**
+ * Handle Match Results from SportsPress
+ */
+function mkps_handle_sportspress_result_update( $event_id ) {
+    $stake_id = get_post_meta( $event_id, '_mkps_stake_id', true );
     if ( ! $stake_id ) {
         return;
     }
 
-    $results = get_post_meta( $post_id, 'sp_results', true );
-    $teams = get_post_meta( $post_id, 'sp_team', true );
-    if ( empty( $results ) || empty( $teams ) ) {
+    $results = get_post_meta( $event_id, 'sp_results', true );
+    $teams = get_post_meta( $event_id, 'sp_team', true );
+    if ( ! $results || ! $teams ) {
         return;
     }
 
-    $author_team_id = $teams[0];
-    $opponent_team_id = $teams[1];
-    $author_score = isset( $results[ $author_team_id ]['score'] ) ? intval( $results[ $author_team_id ]['score'] ) : 0;
-    $opponent_score = isset( $results[ $opponent_team_id ]['score'] ) ? intval( $results[ $opponent_team_id ]['score'] ) : 0;
-
-    $points = get_post_meta( $stake_id, '_mkps_stake_points', true );
-    $commission_rate = get_post_meta( $stake_id, '_mkps_commission_rate', true );
-    $commission_rate = $commission_rate ?: get_option( 'mkps_options', array( 'commission_rate' => 0.05 ) )['commission_rate'];
-    $commission = $points * $commission_rate * 2; // Commission from both users
-    $payout = ( $points * 2 ) - $commission;
-
-    $mycred = mycred();
-    $author_id = get_post_field( 'post_author', $stake_id );
-    $opponent_id = get_post_meta( $stake_id, '_mkps_opponent_id', true );
-    $admin_id = get_option( 'admin_user_id', 1 );
-
-    if ( $author_score > $opponent_score ) {
-        // Author wins
-        $mycred->add_creds( 'mkps_stake_won', $author_id, $payout, 'Won stake #%d', $stake_id );
-        update_user_meta( $author_id, '_mkps_wins', get_user_meta( $author_id, '_mkps_wins', true ) + 1 );
-        update_user_meta( $opponent_id, '_mkps_losses', get_user_meta( $opponent_id, '_mkps_losses', true ) + 1 );
-    } elseif ( $opponent_score > $author_score ) {
-        // Opponent wins
-        $mycred->add_creds( 'mkps_stake_won', $opponent_id, $payout, 'Won stake #%d', $stake_id );
-        update_user_meta( $opponent_id, '_mkps_wins', get_user_meta( $opponent_id, '_mkps_wins', true ) + 1 );
-        update_user_meta( $author_id, '_mkps_losses', get_user_meta( $author_id, '_mkps_losses', true ) + 1 );
-    } else {
-        // Draw
-        $mycred->add_creds( 'mkps_stake_draw', $author_id, $points, 'Draw for stake #%d', $stake_id );
-        $mycred->add_creds( 'mkps_stake_draw', $opponent_id, $points, 'Draw for stake #%d', $stake_id );
-        update_user_meta( $author_id, '_mkps_draws', get_user_meta( $author_id, '_mkps_draws', true ) + 1 );
-        update_user_meta( $opponent_id, '_mkps_draws', get_user_meta( $opponent_id, '_mkps_draws', true ) + 1 );
+    $team_scores = array();
+    foreach ( $teams as $team_id ) {
+        $team_scores[$team_id] = isset( $results[$team_id]['points'] ) ? intval( $results[$team_id]['points'] ) : 0;
     }
 
-    // Award commission to admin
-    $mycred->add_creds( 'mkps_commission', $admin_id, $commission, 'Commission for stake #%d', $stake_id );
+    $creator_id = get_post_field( 'post_author', $stake_id );
+    $accepting_user_id = get_post_meta( $stake_id, '_mkps_stake_accepted_by', true );
+    $creator_team_id = get_user_meta( $creator_id, '_sp_team_id', true );
+    $accepting_team_id = get_user_meta( $accepting_user_id, '_sp_team_id', true );
 
-    update_post_meta( $stake_id, '_mkps_status', 'completed' );
+    if ( $team_scores[$creator_team_id] === $team_scores[$accepting_team_id] ) {
+        mkps_record_match_results( $event_id, null, true );
+    } elseif ( $team_scores[$creator_team_id] > $team_scores[$accepting_team_id] ) {
+        mkps_record_match_results( $event_id, $creator_id );
+    } else {
+        mkps_record_match_results( $event_id, $accepting_user_id );
+    }
 }
-add_action( 'save_post_sp_event', 'mkps_update_points_on_result' );
+add_action( 'sportspress_event_updated', 'mkps_handle_sportspress_result_update' );

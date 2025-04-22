@@ -5,14 +5,16 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Plugin Deactivation Handler
+ * MKPS_Deactivator class
+ * Handles plugin deactivation tasks
  */
 class MKPS_Deactivator {
 
     /**
-     * Deactivate the plugin
+     * Deactivation hook
      */
     public static function deactivate() {
-        // Clean up if needed
+        // Flush rewrite rules
+        flush_rewrite_rules();
     }
 }

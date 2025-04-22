@@ -1,3 +1,3 @@
 jQuery(document).ready(function($) {
-    // Admin scripts if needed
+    console.log('MK Point Staker admin script loaded.');
 });

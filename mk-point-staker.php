@@ -1,180 +1,89 @@
 <?php
 /*
- * Plugin Name: MK Point Staker
- * Description: A plugin for managing point-based stakes with SportsPress integration.
- * Version: 1.0.0
- * Author: Mikael Kraft
- * Text Domain: mk-point-staker
- */
+Plugin Name: MK Point Staker
+Plugin URI: https://ivytag.live
+Description: A plugin that integrates myCRED, SportsPress, and Profile managers to allow users to stake points in online matches against each other. A stake is created by a user, and a SportsPress event is automatically generated between the author and any user who accepts the stake first. The stake amount decided by the author is deducted as points from the involved users. The winner is decided when the match result is updated. Results ending in a draw cause a refund to both parties.
+Version: 1.0.3
+Author: Mikael Kraft
+Author URI: https://x.com/mikael_kraft
+License: GPL2
+Text Domain: mk-point-staker
+*/
 
 if ( ! defined( 'ABSPATH' ) ) {
-    exit;
+    exit; // Prevent direct access
 }
 
-/**
- * Main Plugin Class
- */
-class MK_Point_Staker {
+// Define plugin constants
+define( 'MKPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
+define( 'MKPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
 
-    private static $instance;
+// Autoload necessary files
+require_once MKPS_PLUGIN_DIR . 'includes/activation-deactivation.php';
+require_once MKPS_PLUGIN_DIR . 'includes/class-mkps-activator.php';
+require_once MKPS_PLUGIN_DIR . 'includes/class-mkps-deactivator.php';
 
-    /**
-     * Get instance
-     */
-    public static function get_instance() {
-        if ( ! isset( self::$instance ) ) {
-            self::$instance = new self();
-        }
-        return self::$instance;
-    }
+// Register activation and deactivation hooks
+register_activation_hook( __FILE__, array( 'MKPS_Activator', 'activate' ) );
+register_deactivation_hook( __FILE__, array( 'MKPS_Deactivator', 'deactivate' ) );
 
-    /**
-     * Constructor
-     */
-    private function __construct() {
-        $this->define_constants();
-        $this->includes();
-        $this->init_hooks();
-    }
+// Include additional files for functionality
+require_once MKPS_PLUGIN_DIR . 'includes/class-mkps-post-type.php';
+require_once MKPS_PLUGIN_DIR . 'includes/class-mkps-meta-boxes.php';
+require_once MKPS_PLUGIN_DIR . 'includes/notifications.php';
+require_once MKPS_PLUGIN_DIR . 'includes/pairing.php';
+require_once MKPS_PLUGIN_DIR . 'includes/sportspress-integration.php';
+require_once MKPS_PLUGIN_DIR . 'includes/stake-form-handler.php';
+require_once MKPS_PLUGIN_DIR . 'includes/profile-integration.php';
+require_once MKPS_PLUGIN_DIR . 'includes/class-mkps-assets.php';
+require_once MKPS_PLUGIN_DIR . 'includes/connection-code-handler.php';
 
-    /**
-     * Define constants
-     */
-    private function define_constants() {
-        define( 'MKPS_PLUGIN_DIR', plugin_dir_path( __FILE__ ) );
-        define( 'MKPS_PLUGIN_URL', plugin_dir_url( __FILE__ ) );
-    }
+// Initialize custom post types and meta boxes
+function mkps_initialize() {
+    MKPS_Post_Type::register();
+    MKPS_Meta_Boxes::init();
+}
+add_action( 'init', 'mkps_initialize' );
 
-    /**
-     * Include required files
-     */
-    private function includes() {
-        require_once MKPS_PLUGIN_DIR . 'includes/class-mkps-post-type.php';
-        require_once MKPS_PLUGIN_DIR . 'includes/class-mkps-assets.php';
-        require_once MKPS_PLUGIN_DIR . 'includes/class-mkps-meta-boxes.php';
-        require_once MKPS_PLUGIN_DIR . 'includes/notifications.php';
-        require_once MKPS_PLUGIN_DIR . 'includes/pairing.php';
-        require_once MKPS_PLUGIN_DIR . 'includes/sportspress-integration.php';
-        require_once MKPS_PLUGIN_DIR . 'includes/stake-form-handler.php';
-        require_once MKPS_PLUGIN_DIR . 'includes/profile-integration.php';
-        require_once MKPS_PLUGIN_DIR . 'includes/activation-deactivation.php';
-        require_once MKPS_PLUGIN_DIR . 'includes/ajax-handlers.php';
-    }
+// Enqueue frontend and admin assets
+add_action( 'wp_enqueue_scripts', 'mkps_enqueue_frontend_assets' );
+add_action( 'admin_enqueue_scripts', array( 'MKPS_Assets', 'enqueue_admin_assets' ) );
 
-    /**
-     * Initialize hooks
-     */
-    private function init_hooks() {
-        add_action( 'init', array( $this, 'load_textdomain' ) );
-        add_action( 'admin_enqueue_scripts', array( $this, 'enqueue_admin_scripts' ) );
-        add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_front_scripts' ) );
-        add_action( 'admin_menu', array( $this, 'add_settings_page' ) );
-        add_action( 'admin_init', array( $this, 'register_settings' ) );
-        register_activation_hook( __FILE__, array( 'MKPS_Activation_Deactivation', 'on_activation' ) );
-        register_deactivation_hook( __FILE__, array( 'MKPS_Activation_Deactivation', 'on_deactivation' ) );
-    }
+function mkps_enqueue_frontend_assets() {
+    wp_enqueue_script(
+        'mkps-frontend-script',
+        plugins_url( 'assets/js/frontend-script.js', __FILE__ ),
+        array( 'jquery' ),
+        '1.0.3',
+        true
+    );
 
-    /**
-     * Load plugin text domain
-     */
-    public function load_textdomain() {
-        load_plugin_textdomain( 'mk-point-staker', false, dirname( plugin_basename( __FILE__ ) ) . '/languages' );
-    }
+    wp_localize_script( 'mkps-frontend-script', 'mkps_ajax_object', array(
+        'ajax_url' => admin_url( 'admin-ajax.php' ),
+        'nonce'    => wp_create_nonce( 'mkps_nonce' ),
+    ));
 
-    /**
-     * Enqueue admin scripts and styles
-     */
-    public function enqueue_admin_scripts() {
-        wp_enqueue_style( 'mkps-admin-style', MKPS_PLUGIN_URL . 'assets/css/admin-style.css', array(), '1.0.0' );
-        wp_enqueue_script( 'mkps-admin-script', MKPS_PLUGIN_URL . 'assets/js/admin-script.js', array( 'jquery' ), '1.0.0', true );
-    }
-
-    /**
-     * Enqueue frontend scripts and styles
-     */
-    public function enqueue_front_scripts() {
-        wp_enqueue_style( 'mkps-frontend-style', MKPS_PLUGIN_URL . 'assets/css/frontend-style.css', array(), '1.0.0' );
-        wp_enqueue_script( 'mkps-frontend-script', MKPS_PLUGIN_URL . 'assets/js/frontend-script.js', array( 'jquery' ), '1.0.0', true );
-        wp_localize_script( 'mkps-frontend-script', 'mkps_ajax', array(
-            'ajax_url'         => admin_url( 'admin-ajax.php' ),
-            'stake_nonce'      => wp_create_nonce( 'mkps_stake_nonce' ),
-            'accept_code_nonce' => wp_create_nonce( 'mkps_accept_code' )
-        ) );
-    }
-
-    /**
-     * Add settings page
-     */
-    public function add_settings_page() {
-        add_options_page(
-            __( 'MK Point Staker Settings', 'mk-point-staker' ),
-            __( 'Point Staker', 'mk-point-staker' ),
-            'manage_options',
-            'mkps-settings',
-            array( $this, 'render_settings_page' )
-        );
-    }
-
-    /**
-     * Render settings page
-     */
-    public function render_settings_page() {
-        ?>
-        <div class="wrap">
-            <h1><?php _e( 'MK Point Staker Settings', 'mk-point-staker' ); ?></h1>
-            <form method="post" action="options.php">
-                <?php
-                settings_fields( 'mkps_settings_group' );
-                do_settings_sections( 'mkps-settings' );
-                submit_button();
-                ?>
-            </form>
-        </div>
-        <?php
-    }
-
-    /**
-     * Register settings
-     */
-    public function register_settings() {
-        register_setting( 'mkps_settings_group', 'mkps_options', array( $this, 'sanitize_settings' ) );
-
-        add_settings_section(
-            'mkps_general_section',
-            __( 'General Settings', 'mk-point-staker' ),
-            null,
-            'mkps-settings'
-        );
-
-        add_settings_field(
-            'commission_rate',
-            __( 'Commission Rate', 'mk-point-staker' ),
-            array( $this, 'commission_rate_callback' ),
-            'mkps-settings',
-            'mkps_general_section'
-        );
-    }
-
-    /**
-     * Sanitize settings
-     */
-    public function sanitize_settings( $input ) {
-        $sanitized = array();
-        $sanitized['commission_rate'] = isset( $input['commission_rate'] ) ? floatval( $input['commission_rate'] ) : 0.05;
-        return $sanitized;
-    }
-
-    /**
-     * Commission rate field callback
-     */
-    public function commission_rate_callback() {
-        $options = get_option( 'mkps_options', array( 'commission_rate' => 0.05 ) );
-        ?>
-        <input type="number" step="0.01" min="0" max="1" name="mkps_options[commission_rate]" value="<?php echo esc_attr( $options['commission_rate'] ); ?>">
-        <p class="description"><?php _e( 'Set the commission rate for stakes (e.g., 0.05 for 5%).', 'mk-point-staker' ); ?></p>
-        <?php
-    }
+    wp_enqueue_style( 'mkps-frontend-style', plugins_url( 'assets/css/frontend-style.css', __FILE__ ), array(), '1.0.3' );
 }
 
-// Initialize plugin
-MK_Point_Staker::get_instance();
+// Check for required plugins
+function mkps_check_required_plugins() {
+    $missing_plugins = array();
+    if ( ! is_plugin_active( 'sportspress/sportspress.php' ) && ! is_plugin_active( 'sportspress-pro/sportspress-pro.php' ) ) {
+        $missing_plugins[] = 'SportsPress (Free or Pro)';
+    }
+    if ( ! is_plugin_active( 'mycred/mycred.php' ) ) {
+        $missing_plugins[] = 'myCRED';
+    }
+    if ( ! class_exists( 'UM' ) ) {
+        $missing_plugins[] = 'Ultimate Member';
+    }
+    if ( ! empty( $missing_plugins ) ) {
+        add_action( 'admin_notices', function() use ( $missing_plugins ) {
+            echo '<div class="notice notice-warning is-dismissible">
+                     <p><strong>Warning:</strong> MK Point Staker recommends the following plugins for full functionality: ' . implode( ', ', $missing_plugins ) . '.</p>
+                 </div>';
+        });
+    }
+}
+add_action( 'admin_init', 'mkps_check_required_plugins' );

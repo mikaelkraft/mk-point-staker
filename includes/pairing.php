@@ -5,99 +5,94 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 /**
- * Handle Stake Pairing
+ * Render Accept Button for Stake
  */
-function mkps_accept_stake() {
-    check_ajax_referer( 'mkps_stake_nonce', 'nonce' );
+function mkps_render_accept_button( $stake_id ) {
+    if ( is_user_logged_in() ) {
+        $is_accepted = get_post_meta( $stake_id, '_mkps_stake_accepted', true );
 
-    $stake_id = isset( $_POST['stake_id'] ) ? absint( $_POST['stake_id'] ) : 0;
-    $user_id = get_current_user_id();
-
-    if ( ! $stake_id || ! $user_id ) {
-        wp_send_json_error( __( 'Invalid request.', 'mk-point-staker' ) );
+        if ( ! $is_accepted ) {
+            echo '<form method="post" class="mkps-accept-stake-form">';
+            echo '<input type="hidden" name="stake_id" value="' . esc_attr( $stake_id ) . '">';
+            echo '<input type="submit" name="mkps_accept_stake" value="' . __( 'Accept Stake', 'mk-point-staker' ) . '" class="button button-primary">';
+            echo wp_nonce_field( 'mkps_accept_stake_nonce', 'mkps_accept_stake_nonce_field' );
+            echo '</form>';
+        } else {
+            echo '<p>' . __( 'This stake has already been accepted.', 'mk-point-staker' ) . '</p>';
+        }
     }
-
-    $status = get_post_meta( $stake_id, '_mkps_status', true );
-    if ( $status !== 'open' ) {
-        wp_send_json_error( __( 'Stake is not available.', 'mk-point-staker' ) );
-    }
-
-    $author_id = get_post_field( 'post_author', $stake_id );
-    if ( $user_id == $author_id ) {
-        wp_send_json_error( __( 'You cannot accept your own stake.', 'mk-point-staker' ) );
-    }
-
-    $points = get_post_meta( $stake_id, '_mkps_stake_points', true );
-    $mycred = mycred();
-    $balance = $mycred->get_users_balance( $user_id );
-
-    if ( $balance < $points ) {
-        wp_send_json_error( __( 'Insufficient points.', 'mk-point-staker' ) );
-    }
-
-    $mycred->add_creds(
-        'mkps_stake_accepted',
-        $user_id,
-        -$points,
-        'Points deducted for accepting stake #%d',
-        $stake_id
-    );
-
-    update_post_meta( $stake_id, '_mkps_status', 'accepted' );
-    update_post_meta( $stake_id, '_mkps_opponent_id', $user_id );
-
-    $author_team_id = get_user_meta( $author_id, '_sp_team_id', true );
-    $opponent_team_id = get_user_meta( $user_id, '_sp_team_id', true );
-    $author_team_name = $author_team_id ? get_the_title( $author_team_id ) : get_userdata( $author_id )->display_name;
-    $opponent_team_name = $opponent_team_id ? get_the_title( $opponent_team_id ) : get_userdata( $user_id )->display_name;
-
-    do_action( 'mkps_stake_accepted', $stake_id, $author_team_id, $opponent_team_id );
-
-    $message = sprintf( __( '%s accepted your stake for %d points.', 'mk-point-staker' ), esc_html( $opponent_team_name ), $points );
-    mkps_send_notification( $author_id, __( 'Stake Accepted', 'mk-point-staker' ), $message, $stake_id );
-
-    wp_send_json_success( __( 'Stake accepted successfully.', 'mk-point-staker' ) );
 }
-add_action( 'wp_ajax_mkps_accept_stake', 'mkps_accept_stake' );
 
 /**
- * Cancel Stake
+ * Handle Stake Acceptance
  */
-function mkps_cancel_stake() {
-    check_ajax_referer( 'mkps_stake_nonce', 'nonce' );
+function mkps_handle_stake_acceptance() {
+    if ( isset( $_POST['mkps_accept_stake'], $_POST['mkps_accept_stake_nonce_field'] ) &&
+         wp_verify_nonce( $_POST['mkps_accept_stake_nonce_field'], 'mkps_accept_stake_nonce' ) ) {
 
-    $stake_id = isset( $_POST['stake_id'] ) ? absint( $_POST['stake_id'] ) : 0;
-    $user_id = get_current_user_id();
+        $stake_id = intval( $_POST['stake_id'] );
+        $user_id = get_current_user_id();
+        $stake_points = get_post_meta( $stake_id, '_mkps_stake_points', true );
+        $stake_author_id = get_post_field( 'post_author', $stake_id );
 
-    if ( ! $stake_id || ! $user_id ) {
-        wp_send_json_error( __( 'Invalid request.', 'mk-point-staker' ) );
+        if ( $user_id === $stake_author_id ) {
+            add_filter( 'the_content', function ( $content ) {
+                return $content . '<p>' . __( 'You cannot accept your own stake.', 'mk-point-staker' ) . '</p>';
+            });
+            return;
+        }
+
+        if ( mkps_has_sufficient_points( $user_id, $stake_points ) && mkps_has_sufficient_points( $stake_author_id, $stake_points ) ) {
+            mkps_deduct_points( $user_id, $stake_points );
+
+            update_post_meta( $stake_id, '_mkps_stake_accepted', true );
+            update_post_meta( $stake_id, '_mkps_stake_accepted_by', $user_id );
+
+            $connection_code = get_post_meta( $stake_id, '_mkps_connection_code', true ); // Already set on creation
+            mkps_notify_stake_acceptance( $stake_id, $user_id );
+            do_action( 'mkps_stake_accepted', $stake_id, $stake_author_id, $user_id );
+
+            add_filter( 'the_content', function ( $content ) use ( $connection_code, $user_id, $stake_author_id ) {
+                if ( $user_id === $stake_author_id ) {
+                    $content .= '<p>' . sprintf( __( 'Stake accepted! Connection Code: <strong>%s</strong>', 'mk-point-staker' ), esc_html( $connection_code ) ) . '</p>';
+                } elseif ( $user_id === get_current_user_id() ) {
+                    $content .= '<p>' . sprintf( __( 'You accepted the stake! Connection Code: %s', 'mk-point-staker' ), esc_html( $connection_code ) ) . '</p>';
+                } else {
+                    $content .= '<p>' . __( 'Stake has been accepted.', 'mk-point-staker' ) . '</p>';
+                }
+                return $content;
+            });
+        } else {
+            add_filter( 'the_content', function ( $content ) {
+                $content .= '<p>' . __( 'Failed to accept stake due to insufficient points.', 'mk-point-staker' ) . '</p>';
+                return $content;
+            });
+        }
     }
-
-    $author_id = get_post_field( 'post_author', $stake_id );
-    if ( $user_id != $author_id ) {
-        wp_send_json_error( __( 'You can only cancel your own stakes.', 'mk-point-staker' ) );
-    }
-
-    $status = get_post_meta( $stake_id, '_mkps_status', true );
-    if ( $status !== 'open' ) {
-        wp_send_json_error( __( 'Only open stakes can be cancelled.', 'mk-point-staker' ) );
-    }
-
-    $points = get_post_meta( $stake_id, '_mkps_stake_points', true );
-    $mycred = mycred();
-    $mycred->add_creds(
-        'mkps_stake_cancelled',
-        $user_id,
-        $points,
-        'Points refunded for cancelling stake #%d',
-        $stake_id
-    );
-
-    wp_delete_post( $stake_id, true );
-
-    $message = __( 'Your stake has been cancelled and points refunded.', 'mk-point-staker' );
-    mkps_send_notification( $user_id, __( 'Stake Cancelled', 'mk-point-staker' ), $message );
-
-    wp_send_json_success( __( 'Stake cancelled successfully.', 'mk-point-staker' ) );
 }
-add_action( 'wp_ajax_mkps_cancel_stake', 'mkps_cancel_stake' );
+add_action( 'template_redirect', 'mkps_handle_stake_acceptance' );
+
+/**
+ * Check If User Has Sufficient Points
+ */
+function mkps_has_sufficient_points( $user_id, $points ) {
+    $current_points = mycred_get_users_balance( $user_id );
+    return ( $current_points >= $points );
+}
+
+/**
+ * Deduct Points from User
+ */
+function mkps_deduct_points( $user_id, $points ) {
+    mycred_subtract( 'stake_deduction', $user_id, $points, __( 'Points deducted for stake participation', 'mk-point-staker' ) );
+}
+
+/**
+ * Notify Users of Stake Acceptance
+ */
+function mkps_notify_stake_acceptance( $stake_id, $acceptor_id ) {
+    $stake_author_id = get_post_field( 'post_author', $stake_id );
+    $acceptor_name = get_userdata( $acceptor_id )->display_name;
+    $message = sprintf( __( '%s has accepted your stake!', 'mk-point-staker' ), $acceptor_name );
+    wp_mail( get_userdata( $stake_author_id )->user_email, __( 'Stake Accepted', 'mk-point-staker' ), $message );
+}

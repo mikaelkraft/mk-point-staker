@@ -1,15 +1,18 @@
-#mkps_stake_details .inside {
-    padding: 20px;
+/* Admin Styles for MK Point Staker */
+.mkps-meta-box {
+    margin: 10px 0;
 }
 
-#mkps_stake_details label {
+.mkps-meta-box label {
     display: block;
     margin-bottom: 5px;
     font-weight: bold;
 }
 
-#mkps_stake_details input[type="number"] {
+.mkps-meta-box input[type="text"],
+.mkps-meta-box input[type="number"] {
     width: 100%;
     padding: 8px;
     margin-bottom: 10px;
+    box-sizing: border-box;
 }

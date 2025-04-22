@@ -1,176 +1,254 @@
-.mkps-stake-container {
-    max-width: 400px;
-    margin: 20px auto;
+/* Frontend Styles for MK Point Staker */
+.mkps-stake-form {
+    margin: 20px 0;
+    background: #2a1a3a; /* Dark purple background */
     padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
+    border-radius: 8px;
+    color: #fff;
 }
 
-.mkps-stake-container h3 {
-    margin-top: 20px;
-}
-
-.mkps-stake-form, .mkps-accept-code-form {
-    margin-bottom: 20px;
-}
-
-.mkps-stake-form label, .mkps-accept-code-form label {
+.mkps-stake-form label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #e0d4f5;
 }
 
-.mkps-stake-form input[type="number"], .mkps-accept-code-form input[type="text"] {
+.mkps-stake-form input[type="number"],
+.mkps-stake-form input[type="text"] {
     width: 100%;
-    padding: 8px;
-    margin-bottom: 10px;
+    padding: 10px;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+    border: 1px solid #4b3475;
+    border-radius: 4px;
+    background: #3b2655;
+    color: #fff;
 }
 
-.mkps-stake-form input[type="submit"], .mkps-accept-code-form input[type="submit"] {
-    background-color: #0073aa;
+.mkps-stake-form button {
+    background-color: #6b46c1; /* Vibrant purple */
     color: #fff;
-    padding: 10px 20px;
+    padding: 12px 24px;
     border: none;
-    border-radius: 3px;
+    border-radius: 4px;
     cursor: pointer;
+    font-weight: 600;
 }
 
-.mkps-stake-form input[type="submit"]:hover, .mkps-accept-code-form input[type="submit"]:hover {
-    background-color: #005177;
+.mkps-stake-form button:hover {
+    background-color: #553c9a;
 }
 
-.mkps-user-stats {
+#mkps-stake-feedback {
+    margin-top: 12px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.mkps-frontend-container {
     margin: 20px 0;
-}
-
-.mkps-stats-box {
-    display: inline-block;
-    padding: 10px 20px;
-    margin-right: 10px;
-    border-radius: 5px;
+    background: #2a1a3a;
+    padding: 20px;
+    border-radius: 8px;
     color: #fff;
 }
 
-.mkps-stats-box.wins {
-    background-color: #28a745;
+#mkps-notifications-toggle {
+    background-color: #3b2655;
+    padding: 12px 20px;
+    border: 1px solid #4b3475;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #e0d4f5;
+    font-weight: 600;
 }
 
-.mkps-stats-box.losses {
-    background-color: #dc3545;
-}
-
-.mkps-stats-box.draws {
-    background-color: #ffc107;
-}
-
-.mkps-connection-codes {
-    margin: 20px 0;
-}
-
-.mkps-connection-codes ul {
+.mkps-notifications {
     list-style: none;
     padding: 0;
+    margin: 12px 0;
 }
 
-.mkps-connection-codes li {
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
+.mkps-notifications li {
+    padding: 12px;
+    border-bottom: 1px solid #4b3475;
+    background: #3b2655;
+    border-radius: 4px;
+    margin-bottom: 8px;
 }
 
-.mkps-connection-codes li:last-child {
-    border-bottom: none;
+.mkps-unread {
+    background-color: #4b3475;
+    font-weight: 600;
 }
 
-.mkps-connection-codes strong {
-    color: #0073aa;
+.mkps-read {
+    background-color: #2a1a3a;
 }
 
-.mkps-available-stakes {
-    margin: 20px 0;
+.mkps-unread-count,
+.mkps-available-count {
+    color: #b794f4;
+    font-weight: 600;
+    margin-left: 8px;
 }
 
-.mkps-view-toggle {
-    margin-bottom: 10px;
-}
-
-.mkps-toggle-view {
-    padding: 8px 15px;
-    margin-right: 5px;
-    border: 1px solid #ddd;
-    background: #f7f7f7;
-    cursor: pointer;
-    border-radius: 3px;
-}
-
-.mkps-toggle-view.active {
-    background: #0073aa;
+.mkps-stake-count {
+    background: #6b46c1;
     color: #fff;
-    border-color: #0073aa;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
 }
 
-.mkps-stakes-list.list-view .mkps-stake-item {
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
+.mkps-pagination {
+    margin-top: 12px;
 }
 
-.mkps-stakes-list.card-view .mkps-stake-item {
-    display: inline-block;
-    width: 200px;
-    padding: 15px;
-    margin: 10px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    vertical-align: top;
+.mkps-pagination a {
+    margin-right: 8px;
+    text-decoration: none;
+    color: #b794f4;
 }
 
-.mkps-stakes-list.card-view .mkps-stake-item h4 {
-    font-size: 16px;
-    margin: 0 0 10px;
+.mkps-pagination a:hover {
+    color: #e0d4f5;
 }
 
-.mkps-stake-item p {
-    margin: 5px 0;
-}
-
-.mkps-accept-stake {
-    background-color: #28a745;
+.mkps-available-stakes-button {
+    background-color: #38a169; /* Green for visibility */
     color: #fff;
-    padding: 8px 15px;
+    padding: 12px 24px;
     border: none;
-    border-radius: 3px;
+    border-radius: 4px;
     cursor: pointer;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    font-weight: 600;
 }
 
-.mkps-accept-stake:hover {
-    background-color: #218838;
+.mkps-notification-bubble {
+    background-color: #e53e3e; /* Red for notifications */
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 600;
 }
 
-.mkps-status-accepted, .mkps-status-own {
-    color: #666;
-    font-style: italic;
+.mkps-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 3px solid #e0d4f5;
+    border-top: 3px solid #6b46c1;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
 }
 
-.mkps-error {
-    color: #dc3545;
-    font-weight: bold;
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
-.mkps-success {
-    color: #28a745;
-    font-weight: bold;
+/* Stats Box for Wins, Losses, Draws */
+.mkps-stats-box {
+    display: flex;
+    justify-content: space-between;
+    margin: 20px 0;
+    padding: 20px;
+    background: #3b2655;
+    border-radius: 8px;
+    color: #fff;
 }
 
-@media (max-width: 600px) {
-    .mkps-stake-container, .mkps-available-stakes {
-        max-width: 100%;
-    }
+.mkps-stats-box div {
+    flex: 1;
+    text-align: center;
+    padding: 12px;
+    margin: 0 8px;
+    background: #4b3475;
+    border-radius: 4px;
+}
 
-    .mkps-stats-box {
-        display: block;
-        margin-bottom: 10px;
-    }
+.mkps-stats-box div h4 {
+    margin: 0 0 8px;
+    font-size: 16px;
+    color: #e0d4f5;
+}
 
-    .mkps-stakes-list.card-view .mkps-stake-item {
-        width: 100%;
-        margin: 10px 0;
-    }
+.mkps-stats-box div span {
+    font-size: 24px;
+    font-weight: 600;
+    color: #b794f4;
+}
+
+/* Sitewide Notification Float */
+.mkps-sitewide-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #6b46c1;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+    z-index: 1000;
+}
+
+.mkps-sitewide-notification:hover {
+    background: #553c9a;
+}
+
+.mkps-sitewide-notification .mkps-notification-count {
+    background: #e53e3e;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 12px;
+    margin-left: 8px;
+    font-size: 12px;
+}
+
+/* Connection Code Input Form */
+.mkps-connection-code-form {
+    margin: 20px 0;
+    background: #2a1a3a;
+    padding: 20px;
+    border-radius: 8px;
+    color: #fff;
+}
+
+.mkps-connection-code-form label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #e0d4f5;
+}
+
+.mkps-connection-code-form input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #4b3475;
+    border-radius: 4px;
+    background: #3b2655;
+    color: #fff;
+}
+
+.mkps-connection-code-form button {
+    background-color: #6b46c1;
+    color: #fff;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.mkps-connection-code-form button:hover {
+    background-color: #553c9a;
 }
